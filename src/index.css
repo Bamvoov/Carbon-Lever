@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #FAFAF8;
+    color: #1C1C1A;
+  }
+}
+
+/* Custom minimal slider styling (editorial, NYT style) */
+input[type="range"].minimal-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  background: transparent;
+  cursor: pointer;
+  height: 24px;
+}
+
+input[type="range"].minimal-slider:focus {
+  outline: none;
+}
+
+/* Track styling */
+input[type="range"].minimal-slider::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 2px;
+  background: #E2E2DC;
+  border: none;
+  border-radius: 0;
+}
+
+input[type="range"].minimal-slider::-moz-range-track {
+  width: 100%;
+  height: 2px;
+  background: #E2E2DC;
+  border: none;
+  border-radius: 0;
+}
+
+/* Thumb styling */
+input[type="range"].minimal-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  height: 14px;
+  width: 14px;
+  border-radius: 0; /* Square/minimal shape */
+  background: #1C1C1A;
+  margin-top: -6px; /* Center it on track */
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+input[type="range"].minimal-slider:hover::-webkit-slider-thumb {
+  background: #5B7B5E;
+  transform: scale(1.1);
+}
+
+input[type="range"].minimal-slider:active::-webkit-slider-thumb,
+input[type="range"].minimal-slider:focus::-webkit-slider-thumb {
+  background: #5B7B5E; /* Muted sage green on active/focus */
+}
+
+input[type="range"].minimal-slider::-moz-range-thumb {
+  height: 14px;
+  width: 14px;
+  border: 0;
+  border-radius: 0;
+  background: #1C1C1A;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+input[type="range"].minimal-slider:hover::-moz-range-thumb {
+  background: #5B7B5E;
+  transform: scale(1.1);
+}
+
+input[type="range"].minimal-slider:active::-moz-range-thumb,
+input[type="range"].minimal-slider:focus::-moz-range-thumb {
+  background: #5B7B5E;
+}
+
+/* Print styles for clean certificate export */
+@media print {
+  body {
+    background-color: #FFFFFF !important;
+    color: #1C1C1A !important;
+    margin: 0 !important;
+    padding: 20px !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-only {
+    border: 1px solid #1C1C1A !important;
+    background-color: #FFFFFF !important;
+    padding: 40px !important;
+    margin: 0 auto !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+}
