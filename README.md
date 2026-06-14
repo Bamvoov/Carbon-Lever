@@ -1,73 +1,104 @@
-# React + TypeScript + Vite
+# ⚖️ Carbon Lever
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An elegant, single-page carbon footprint analysis and commitment tool designed with a clean, editorial, data-forward aesthetic.
 
-Currently, two official plugins are available:
+Unlike traditional carbon calculators that focus purely on guilt-inducing totals, **Carbon Lever** evaluates your habits in real-time, highlights your single highest-impact opportunity ("Your Primary Lever"), and builds a personalized, quantified action plan to reduce emissions.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## ✨ Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Real-Time Calculation**: A smooth, animated counting interface updating your carbon footprint instantly as you adjust habit inputs.
+- **Dynamic "Primary Lever" Identification**: Automatically identifies the category where you have the highest realistic reduction potential.
+- **Low-Footprint Acknowledgment State**: If your monthly footprint is well below the global average (< 200 kg CO2e/mo), the app transitions into an encouraging state, suggesting a single small step forward rather than preaching big lifestyle overhauls.
+- **"Why This Matters" Context Panel**: Provides immediate scientific framing on atmospheric emissions trends inline without relying on alarmist disaster framing.
+- **Personalized commitments**: A dynamic action plan builder containing checkable options whose savings potentials scale intelligently relative to your current habits.
+- **Equivalency Indicators**: Translates metric savings into visual real-world comparisons (e.g. vehicle-kilometers avoided or mature trees planted).
+- **Print & PDF Export**: A custom print stylesheet generates a beautiful, minimalist certificate-style "Impact Mitigation Report" summary card when you click **Print / Save PDF**.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## 🧮 Calculations & Formulas
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+All metrics are calculated entirely client-side using validated ecological factors:
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+### 1. Habit Categories (Baseline)
+- **Diet**: $\text{meat meals/week} \times 2.5 \text{ kg CO2e} \times 4.3 \text{ weeks/month}$
+- **Transportation**: $\text{km driven/week} \times 0.17 \text{ kg CO2e/km} \times 4.3 \text{ weeks/month}$
+- **Household Energy**:
+  - *Low Tier*: $60$ kg CO2e/month
+  - *Medium Tier*: $120$ kg CO2e/month
+  - *High Tier*: $200$ kg CO2e/month
+- **Online Purchases**: $\text{new items/month} \times 15$ kg CO2e
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### 2. Opportunity Potentials (The Lever)
+To prioritize where change is most realistic and impactful, each category has a scaled reduction limit:
+- **Diet Opportunity**: $50\%$ of Diet Footprint
+- **Transport Opportunity**: $30\%$ of Transport Footprint
+- **Energy Opportunity**: $15\%$ of Energy Footprint
+- **Shopping Opportunity**: $40\%$ of Shopping Footprint
+
+### 3. Plan Equivalencies
+- **Driving Equivalent**: $\text{Savings (kg)} \div 0.17 \text{ kg/km}$
+- **Mature Trees planted**: $\frac{\text{Savings (kg)} \times 12 \text{ months/year}}{20 \text{ kg/tree/year}} = \text{Savings} \times 0.6$
+
+---
+
+## 🎨 Design System
+
+Carbon Lever adopts an editorial, editorial-column typography style reminiscent of *The New York Times* or *The Economist*:
+- **Color Palette**:
+  - **Background**: `#FAFAF8` (Warm off-white)
+  - **Main Text**: `#1C1C1A` (Rich near-black)
+  - **Secondary Text**: `#575753` (Warm charcoal gray - WCAG AAA Compliant contrast)
+  - **Accent**: `#5B7B5E` (Muted Sage Green, used selectively for hero number highlights and check bounds)
+- **Typography**:
+  - **Headings & Accents**: `Fraunces` (Google Font - elegant display serif)
+  - **Body Copy**: `Inter` (Google Font - clean, legible sans-serif)
+- **Sliders**: Custom range input styles featuring an editorial 2px baseline track and sharp square black thumbs turning green on hover/focus.
+
+---
+
+## 💻 Tech Stack
+- **Core**: React 19 + TypeScript + Vite
+- **Styling**: Tailwind CSS v3 + Custom CSS resets
+- **Linter**: ESLint (Flat Config)
+- **Package Manager**: npm
+
+---
+
+## 🚀 Getting Started
+
+### Prerequisites
+- Node.js (v18.0.0 or higher recommended)
+- npm
+
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone git@github.com:Bamvoov/Carbon-Lever.git
+   cd Carbon-Lever
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+### Development
+Start the local development server with Hot Module Replacement (HMR):
+```bash
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Production Build
+Compile and optimize for static hosting (Vercel, Netlify, GitHub Pages, etc.):
+```bash
+npm run build
+```
+The production assets will be outputted to the `dist/` directory.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+### Linter
+Verify code style and rules:
+```bash
+npm run lint
 ```
