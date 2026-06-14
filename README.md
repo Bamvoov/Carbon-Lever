@@ -6,6 +6,11 @@ Unlike traditional carbon calculators that focus purely on guilt-inducing totals
 
 ---
 
+<img width="778" height="936" alt="image" src="https://github.com/user-attachments/assets/27664459-6e5a-478a-b0a1-5d017b0937ce" />
+<img width="1050" height="972" alt="image" src="https://github.com/user-attachments/assets/cc7a62fc-df9d-4579-82e2-c5d4d2ca4647" />
+
+
+
 ## ✨ Features
 
 - **Real-Time Calculation**: A smooth, animated counting interface updating your carbon footprint instantly as you adjust habit inputs.
