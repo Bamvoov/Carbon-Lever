@@ -107,3 +107,9 @@ Verify code style and rules:
 ```bash
 npm run lint
 ```
+
+### Running Tests
+Execute the unit and component test suite using Vitest:
+```bash
+npm run test
+```

@@ -11,6 +11,7 @@ export default {
           bg: '#FAFAF8',
           text: '#1C1C1A',
           accent: '#5B7B5E',
+          'accent-dark': '#4A6B4D',
         }
       },
       fontFamily: {

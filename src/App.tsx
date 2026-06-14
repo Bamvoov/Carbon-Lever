@@ -1,5 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
 import './App.css'
+import {
+  calculateFootprint,
+  calculatePotentials,
+  getActiveLever,
+  actionsMap
+} from './calculations'
 
 // Custom hook to animate numbers smoothly
 function useAnimatedNumber(targetValue: number, duration: number = 350) {
@@ -42,12 +48,6 @@ function useAnimatedNumber(targetValue: number, duration: number = 350) {
   return currentValue;
 }
 
-interface ActionOption {
-  id: string;
-  label: string;
-  calculateSavings: (inputs: { diet: number; transport: number; energy: number; shopping: number }) => number;
-}
-
 export default function App() {
   // 1. Slider states with sensible defaults
   const [dietMeals, setDietMeals] = useState<number>(10); // 0-21, default 10
@@ -60,99 +60,25 @@ export default function App() {
   const summaryRef = useRef<HTMLDivElement>(null);
 
   // 2. Calculations
-  const dietFootprint = dietMeals * 2.5 * 4.3;
-  const transportFootprint = transportKm * 0.17 * 4.3;
-  
-  const getEnergyFootprint = (tier: number) => {
-    if (tier === 0) return 60;
-    if (tier === 1) return 120;
-    return 200;
-  };
-  const energyFootprint = getEnergyFootprint(energyTier);
-  const shoppingFootprint = shoppingItems * 15;
+  const inputs = { diet: dietMeals, transport: transportKm, energy: energyTier, shopping: shoppingItems };
+  const footprints = calculateFootprint(inputs);
+  const {
+    diet: dietFootprint,
+    transport: transportFootprint,
+    energy: energyFootprint,
+    shopping: shoppingFootprint,
+    total: totalFootprint,
+  } = footprints;
 
-  const totalFootprint = dietFootprint + transportFootprint + energyFootprint + shoppingFootprint;
   const animatedTotal = useAnimatedNumber(totalFootprint, 300);
 
   // 3. Category reduction potentials
-  const dietPotential = dietFootprint * 0.50;
-  const transportPotential = transportFootprint * 0.30;
-  const energyPotential = energyFootprint * 0.15;
-  const shoppingPotential = shoppingFootprint * 0.40;
-
-  const potentials = [
-    { name: 'diet', label: 'dietary choices', potential: dietPotential, current: dietFootprint },
-    { name: 'transport', label: 'transportation', potential: transportPotential, current: transportFootprint },
-    { name: 'energy', label: 'household energy', potential: energyPotential, current: energyFootprint },
-    { name: 'shopping', label: 'consumer goods', potential: shoppingPotential, current: shoppingFootprint },
-  ];
-
-  // The category with the highest resulting kg CO2e savings is "the lever"
-  const activeLeverObj = potentials.reduce((prev, current) => {
-    return (current.potential > prev.potential) ? current : prev;
-  }, potentials[0]);
-
+  const potentials = calculatePotentials(footprints);
+  const activeLeverObj = getActiveLever(potentials);
   const activeLever = activeLeverObj.name;
 
   // Get selected actions for the active lever
   const selectedActions = selectedActionsByLever[activeLever] || [];
-
-  // Actions catalog corresponding to the lever
-  const actionsMap: Record<string, ActionOption[]> = {
-    diet: [
-      {
-        id: 'diet-1',
-        label: 'Swap 3 meat meals/week for plant-based',
-        calculateSavings: (inputs) => Math.min(inputs.diet, 3) * 2.5 * 4.3,
-      },
-      {
-        id: 'diet-2',
-        label: 'Cut 5 meat meals/week',
-        calculateSavings: (inputs) => Math.min(inputs.diet, 5) * 2.5 * 4.3,
-      },
-    ],
-    transport: [
-      {
-        id: 'transport-1',
-        label: 'Carpool 2 days/week',
-        calculateSavings: (inputs) => (inputs.transport * 0.17 * 4.3) * 0.25,
-      },
-      {
-        id: 'transport-2',
-        label: 'Combine errands into one weekly trip',
-        calculateSavings: (inputs) => (inputs.transport * 0.17 * 4.3) * 0.10,
-      },
-      {
-        id: 'transport-3',
-        label: 'Work from home 1 day/week',
-        calculateSavings: (inputs) => (inputs.transport * 0.17 * 4.3) * 0.20,
-      },
-    ],
-    energy: [
-      {
-        id: 'energy-1',
-        label: 'Switch to LED lighting throughout',
-        calculateSavings: (inputs) => Math.min(getEnergyFootprint(inputs.energy), 10),
-      },
-      {
-        id: 'energy-2',
-        label: 'Lower heating/AC by 2°C',
-        calculateSavings: (inputs) => getEnergyFootprint(inputs.energy) * 0.15,
-      },
-    ],
-    shopping: [
-      {
-        id: 'shopping-1',
-        label: 'Cut impulse purchases by half',
-        calculateSavings: (inputs) => (inputs.shopping * 15) * 0.50,
-      },
-      {
-        id: 'shopping-2',
-        label: 'Buy 2 fewer items/month',
-        calculateSavings: (inputs) => Math.min(inputs.shopping, 2) * 15,
-      },
-    ],
-  };
 
   const isLowFootprint = totalFootprint < 200;
 
@@ -163,12 +89,7 @@ export default function App() {
 
     // Calculate savings for each action
     const actionsWithSavings = rawActions.map(action => {
-      const savings = action.calculateSavings({
-        diet: dietMeals,
-        transport: transportKm,
-        energy: energyTier,
-        shopping: shoppingItems
-      });
+      const savings = action.calculateSavings(inputs);
       return { action, savings };
     });
 
@@ -201,12 +122,7 @@ export default function App() {
   // Calculate savings of the checked options
   const planSavings = currentActions
     .filter(action => selectedActions.includes(action.id))
-    .reduce((sum, action) => sum + action.calculateSavings({
-      diet: dietMeals,
-      transport: transportKm,
-      energy: energyTier,
-      shopping: shoppingItems
-    }), 0);
+    .reduce((sum, action) => sum + action.calculateSavings(inputs), 0);
 
   // Equivalencies:
   // 1. Not driving X km: savings / 0.17
@@ -245,7 +161,7 @@ export default function App() {
               <circle cx="9" cy="18" r="4" fill="#1C1C1A" />
               <path d="M39 21C39 16 36 15 33 15C31.5 15 30 16 30 19C30 19 33 19 36 19C39 19 39 21 39 21Z" fill="#5B7B5E" />
             </svg>
-            <span className="font-sans text-sm font-bold tracking-[0.2em] uppercase text-[#4A4A45]">Carbon Lever</span>
+            <h1 className="font-sans text-sm font-bold tracking-[0.2em] uppercase text-[#4A4A45]">Carbon Lever</h1>
           </div>
           <span className="font-serif text-sm italic text-[#575753] hidden sm:inline">Habit Analysis & Opportunity Study</span>
         </div>
@@ -256,7 +172,7 @@ export default function App() {
         <section className="text-center py-10 md:py-16 no-print">
           <p className="font-sans text-sm uppercase tracking-widest text-[#575753] mb-2 font-semibold">Estimated Monthly Footprint</p>
           <div className="flex items-baseline justify-center select-none">
-            <span id="hero-co2-number" className="font-serif text-7xl md:text-9xl text-brand-accent tracking-tighter">
+            <span id="hero-co2-number" aria-live="polite" className="font-serif text-7xl md:text-9xl text-brand-accent tracking-tighter">
               {Math.round(animatedTotal)}
             </span>
             <span className="font-sans text-base text-[#4A4A45] ml-2 font-semibold">kg CO2e</span>
@@ -269,9 +185,9 @@ export default function App() {
         {/* Why This Matters Section */}
         <section className="border-t border-[#E2E2DC] py-10 no-print">
           <div className="border border-brand-accent p-6 bg-[#5B7B5E]/5">
-            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-brand-accent mb-2">
+            <h2 className="font-sans text-xs font-bold uppercase tracking-wider text-brand-accent-dark mb-2">
               WHY THIS MATTERS
-            </h3>
+            </h2>
             <p className="font-sans text-xl leading-relaxed text-brand-text">
               Atmospheric CO2 levels are now higher than at any point in at least <span className="text-brand-accent font-bold">800,000 years</span>, based on ice core records. The IPCC links rising emissions to more frequent and severe heatwaves, droughts, and extreme rainfall events worldwide — a trend visible in recent record-breaking years. Small, realistic changes to everyday habits are part of how that trajectory shifts.
             </p>
@@ -429,12 +345,12 @@ export default function App() {
 
           {/* The Lever Highlight */}
           <div className="border border-brand-accent p-6 bg-[#5B7B5E]/5 my-6">
-            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-brand-accent mb-2">
+            <h3 className="font-sans text-xs font-bold uppercase tracking-wider text-brand-accent-dark mb-2">
               {isLowFootprint ? 'WELL BELOW AVERAGE' : 'YOUR PRIMARY LEVER'}
             </h3>
             {isLowFootprint ? (
               <p className="font-sans text-xl leading-relaxed text-brand-text">
-                Your estimated footprint of <span className="text-brand-accent font-bold">{Math.round(totalFootprint)}</span> kg CO2e/month is well below the global average of roughly 350 kg/month per person. If habits like these were adopted widely, it would meaningfully shift global emissions trends. There's no urgent change needed here — though if you're curious, there's still one small step below that could lower it even further.
+                Your estimated footprint of <span className="text-brand-accent-dark font-bold">{Math.round(totalFootprint)}</span> kg CO2e/month is well below the global average of roughly 350 kg/month per person. If habits like these were adopted widely, it would meaningfully shift global emissions trends. There's no urgent change needed here — though if you're curious, there's still one small step below that could lower it even further.
               </p>
             ) : (
               <>
@@ -476,6 +392,7 @@ export default function App() {
               return (
                 <label 
                   key={action.id}
+                  htmlFor={action.id}
                   className={`flex items-start gap-4 p-4 border transition-colors duration-150 cursor-pointer ${
                     isChecked 
                       ? 'border-brand-accent bg-[#5B7B5E]/5' 
@@ -483,11 +400,12 @@ export default function App() {
                   } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
                   <input
+                    id={action.id}
                     type="checkbox"
                     checked={isChecked}
                     disabled={isDisabled}
                     onChange={() => handleToggleAction(action.id)}
-                    className="mt-1.5 h-4 w-4 accent-brand-accent rounded border-[#E2E2DC]"
+                    className="mt-1.5 h-4 w-4 accent-brand-accent rounded border-[#E2E2DC] focus-visible:ring-2 focus-visible:ring-brand-accent-dark focus-visible:ring-offset-2 focus-visible:outline-none"
                   />
                   <div className="flex-grow">
                     <span className="font-serif text-[#1C1C1A] text-base block md:text-lg leading-snug font-medium">
@@ -508,7 +426,7 @@ export default function App() {
           {/* Running total info */}
           <div className="border border-[#E2E2DC] p-6 mb-8 text-center bg-[#FAFAF8]">
             <p className="font-sans text-xs uppercase tracking-widest text-[#575753] mb-2 font-semibold">Estimated Plan Savings</p>
-            <p className="font-serif text-5xl text-brand-text mb-4">
+            <p aria-live="polite" className="font-serif text-5xl text-brand-text mb-4">
               ~{planSavings.toFixed(1)} <span className="text-lg font-sans text-[#575753] font-medium">kg CO2/month</span>
             </p>
             
@@ -527,9 +445,9 @@ export default function App() {
             <button
               onClick={handleSavePlan}
               disabled={planSavings === 0}
-              className={`px-8 py-3.5 text-xs uppercase tracking-[0.2em] font-bold transition-colors duration-150 ${
+              className={`px-8 py-3.5 text-xs uppercase tracking-[0.2em] font-bold transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-accent-dark focus-visible:ring-offset-2 focus-visible:outline-none ${
                 planSavings > 0 
-                  ? 'bg-brand-accent text-white hover:bg-[#4E6B51]' 
+                  ? 'bg-brand-accent-dark text-white hover:bg-[#3D573F]' 
                   : 'bg-[#E2E2DC] text-[#575753] cursor-not-allowed'
               }`}
             >
@@ -580,7 +498,7 @@ export default function App() {
                         return (
                           <li key={action.id} className="flex justify-between items-start gap-4">
                             <span className="font-serif text-base leading-tight font-medium">— {action.label}</span>
-                            <span className="font-mono text-sm whitespace-nowrap text-[#5B7B5E] font-bold">-{savings.toFixed(1)} kg</span>
+                            <span className="font-mono text-sm whitespace-nowrap text-brand-accent-dark font-bold">-{savings.toFixed(1)} kg</span>
                           </li>
                         );
                       })}
@@ -605,7 +523,7 @@ export default function App() {
             <div className="text-center mt-6 no-print">
               <button
                 onClick={handlePrint}
-                className="px-6 py-3 border border-brand-text text-xs uppercase tracking-[0.15em] font-bold hover:bg-brand-text hover:text-brand-bg transition-colors duration-150"
+                className="px-6 py-3 border border-brand-text text-xs uppercase tracking-[0.15em] font-bold hover:bg-brand-text hover:text-brand-bg transition-colors duration-150 focus-visible:ring-2 focus-visible:ring-brand-text focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 Print / Save PDF
               </button>

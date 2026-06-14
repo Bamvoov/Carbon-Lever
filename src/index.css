@@ -23,6 +23,14 @@ input[type="range"].minimal-slider:focus {
   outline: none;
 }
 
+input[type="range"].minimal-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 2px #FAFAF8, 0 0 0 4px #4A6B4D;
+}
+
+input[type="range"].minimal-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 2px #FAFAF8, 0 0 0 4px #4A6B4D;
+}
+
 /* Track styling */
 input[type="range"].minimal-slider::-webkit-slider-runnable-track {
   width: 100%;
