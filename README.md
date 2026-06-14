@@ -6,7 +6,7 @@ Unlike traditional carbon calculators that focus purely on guilt-inducing totals
 
 ---
 
-<img width="778" height="936" alt="image" src="https://github.com/user-attachments/assets/27664459-6e5a-478a-b0a1-5d017b0937ce" />
+<img width="612" height="963" alt="image" src="https://github.com/user-attachments/assets/86cc12b7-08b0-4579-ab8a-41d1d7b27c37" />
 <img width="634" height="969" alt="image" src="https://github.com/user-attachments/assets/c3ef0546-57a8-4452-a27e-d8f4c95505b9" />
 
 
