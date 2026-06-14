@@ -237,9 +237,17 @@ export default function App() {
       
       {/* Masthead */}
       <header className="border-b border-[#E2E2DC] pb-8 mb-10 no-print">
-        <div className="flex justify-between items-baseline">
-          <span className="font-sans text-sm font-bold tracking-[0.2em] uppercase text-[#4A4A45]">Carbon Lever</span>
-          <span className="font-serif text-sm italic text-[#575753]">Habit Analysis & Opportunity Study</span>
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <svg className="w-8 h-8" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M24 28L18 38H30L24 28Z" fill="#1C1C1A" />
+              <line x1="8" y1="26" x2="40" y2="30" stroke="#1C1C1A" strokeWidth="2.5" strokeLinecap="round" />
+              <circle cx="9" cy="18" r="4" fill="#1C1C1A" />
+              <path d="M39 21C39 16 36 15 33 15C31.5 15 30 16 30 19C30 19 33 19 36 19C39 19 39 21 39 21Z" fill="#5B7B5E" />
+            </svg>
+            <span className="font-sans text-sm font-bold tracking-[0.2em] uppercase text-[#4A4A45]">Carbon Lever</span>
+          </div>
+          <span className="font-serif text-sm italic text-[#575753] hidden sm:inline">Habit Analysis & Opportunity Study</span>
         </div>
       </header>
 
