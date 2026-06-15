@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, useCallback, memo } from 'react'
 import './App.css'
 import {
   calculateFootprint,
@@ -48,6 +48,131 @@ function useAnimatedNumber(targetValue: number, duration: number = 350) {
   return currentValue;
 }
 
+interface SliderRowProps {
+  id: string;
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  valueLabel: string;
+  minLabel: string;
+  maxLabel: string;
+  onChange: (value: number) => void;
+}
+
+const SliderRow = memo(function SliderRow({
+  id,
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  valueLabel,
+  minLabel,
+  maxLabel,
+  onChange
+}: SliderRowProps) {
+  return (
+    <div>
+      <div className="flex justify-between items-baseline mb-2">
+        <label className="font-sans text-sm font-bold uppercase tracking-widest text-[#4A4A45]" htmlFor={id}>
+          {label}
+        </label>
+        <span className="font-serif text-lg text-brand-text font-semibold">
+          {valueLabel}
+        </span>
+      </div>
+      <input 
+        id={id}
+        type="range" 
+        min={min} 
+        max={max} 
+        step={step}
+        value={value} 
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="minimal-slider"
+      />
+      <div className="flex justify-between text-xs text-[#575753] font-mono mt-1">
+        <span>{minLabel}</span>
+        <span>{maxLabel}</span>
+      </div>
+    </div>
+  );
+});
+
+interface ActionPlanItemProps {
+  id: string;
+  label: string;
+  savings: number;
+  isChecked: boolean;
+  onToggle: (id: string) => void;
+}
+
+const ActionPlanItem = memo(function ActionPlanItem({
+  id,
+  label,
+  savings,
+  isChecked,
+  onToggle
+}: ActionPlanItemProps) {
+  const isDisabled = savings <= 0;
+  const handleChange = useCallback(() => {
+    onToggle(id);
+  }, [id, onToggle]);
+
+  return (
+    <label 
+      htmlFor={id}
+      className={`flex items-start gap-4 p-4 border transition-colors duration-150 cursor-pointer ${
+        isChecked 
+          ? 'border-brand-accent bg-[#5B7B5E]/5' 
+          : 'border-[#E2E2DC] hover:border-[#4A4A45]'
+      } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+    >
+      <input
+        id={id}
+        type="checkbox"
+        checked={isChecked}
+        disabled={isDisabled}
+        onChange={handleChange}
+        className="mt-1.5 h-4 w-4 accent-brand-accent rounded border-[#E2E2DC] focus-visible:ring-2 focus-visible:ring-brand-accent-dark focus-visible:ring-offset-2 focus-visible:outline-none"
+      />
+      <div className="flex-grow">
+        <span className="font-serif text-[#1C1C1A] text-base block md:text-lg leading-snug font-medium">
+          {label}
+        </span>
+        <span className="font-mono text-sm text-[#575753] mt-1 block">
+          {isDisabled 
+            ? 'Habit already at zero' 
+            : `Saves ~${savings.toFixed(1)} kg CO2e / month`
+          }
+        </span>
+      </div>
+    </label>
+  );
+});
+
+interface BreakdownBarSegmentProps {
+  share: number;
+  className: string;
+  title: string;
+}
+
+const BreakdownBarSegment = memo(function BreakdownBarSegment({
+  share,
+  className,
+  title
+}: BreakdownBarSegmentProps) {
+  return (
+    <div 
+      style={{ width: `${share}%` }} 
+      className={`h-full transition-all duration-300 ${className}`}
+      title={title}
+    />
+  );
+});
+
 export default function App() {
   // 1. Slider states with sensible defaults
   const [dietMeals, setDietMeals] = useState<number>(10); // 0-21, default 10
@@ -59,9 +184,35 @@ export default function App() {
   const [showSummary, setShowSummary] = useState<boolean>(false);
   const summaryRef = useRef<HTMLDivElement>(null);
 
+  // Callbacks for slider inputs
+  const handleDietChange = useCallback((value: number) => {
+    setDietMeals(value);
+  }, []);
+
+  const handleTransportChange = useCallback((value: number) => {
+    setTransportKm(value);
+  }, []);
+
+  const handleEnergyChange = useCallback((value: number) => {
+    setEnergyTier(value);
+  }, []);
+
+  const handleShoppingChange = useCallback((value: number) => {
+    setShoppingItems(value);
+  }, []);
+
   // 2. Calculations
-  const inputs = { diet: dietMeals, transport: transportKm, energy: energyTier, shopping: shoppingItems };
-  const footprints = calculateFootprint(inputs);
+  const inputs = useMemo(() => ({
+    diet: dietMeals,
+    transport: transportKm,
+    energy: energyTier,
+    shopping: shoppingItems
+  }), [dietMeals, transportKm, energyTier, shoppingItems]);
+
+  const footprints = useMemo(() => {
+    return calculateFootprint(inputs);
+  }, [inputs]);
+
   const {
     diet: dietFootprint,
     transport: transportFootprint,
@@ -73,8 +224,11 @@ export default function App() {
   const animatedTotal = useAnimatedNumber(totalFootprint, 300);
 
   // 3. Category reduction potentials
-  const potentials = calculatePotentials(footprints);
-  const activeLeverObj = getActiveLever(potentials);
+  const activeLeverObj = useMemo(() => {
+    const potentials = calculatePotentials(footprints);
+    return getActiveLever(potentials);
+  }, [footprints]);
+
   const activeLever = activeLeverObj.name;
 
   // Get selected actions for the active lever
@@ -82,9 +236,8 @@ export default function App() {
 
   const isLowFootprint = totalFootprint < 200;
 
-  const rawActions = actionsMap[activeLever] || [];
-  
-  const currentActions = (() => {
+  const currentActions = useMemo(() => {
+    const rawActions = actionsMap[activeLever] || [];
     if (!isLowFootprint) return rawActions;
 
     // Calculate savings for each action
@@ -104,9 +257,9 @@ export default function App() {
     // Sort to find the one with the smallest positive savings
     availableActions.sort((a, b) => a.savings - b.savings);
     return [availableActions[0].action];
-  })();
+  }, [isLowFootprint, activeLever, inputs]);
 
-  const handleToggleAction = (id: string) => {
+  const handleToggleAction = useCallback((id: string) => {
     setSelectedActionsByLever(prev => {
       const currentSelected = prev[activeLever] || [];
       const updated = currentSelected.includes(id)
@@ -117,12 +270,14 @@ export default function App() {
         [activeLever]: updated
       };
     });
-  };
+  }, [activeLever]);
 
   // Calculate savings of the checked options
-  const planSavings = currentActions
-    .filter(action => selectedActions.includes(action.id))
-    .reduce((sum, action) => sum + action.calculateSavings(inputs), 0);
+  const planSavings = useMemo(() => {
+    return currentActions
+      .filter(action => selectedActions.includes(action.id))
+      .reduce((sum, action) => sum + action.calculateSavings(inputs), 0);
+  }, [currentActions, selectedActions, inputs]);
 
   // Equivalencies:
   // 1. Not driving X km: savings / 0.17
@@ -199,99 +354,54 @@ export default function App() {
           <h2 className="font-serif text-2xl mb-8 font-normal text-brand-text">Habit Inputs</h2>
           
           <div className="space-y-8">
-            {/* Diet Slider */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <label className="font-sans text-sm font-bold uppercase tracking-widest text-[#4A4A45]" htmlFor="diet-slider">Dietary Choices</label>
-                <span className="font-serif text-lg text-brand-text font-semibold">
-                  {dietMeals} meat-based meals / week
-                </span>
-              </div>
-              <input 
-                id="diet-slider"
-                type="range" 
-                min="0" 
-                max="21" 
-                value={dietMeals} 
-                onChange={(e) => setDietMeals(Number(e.target.value))}
-                className="minimal-slider"
-              />
-              <div className="flex justify-between text-xs text-[#575753] font-mono mt-1">
-                <span>0 meals (fully plant-based)</span>
-                <span>21 meals (meat daily)</span>
-              </div>
-            </div>
+            <SliderRow
+              id="diet-slider"
+              label="Dietary Choices"
+              value={dietMeals}
+              min={0}
+              max={21}
+              valueLabel={`${dietMeals} meat-based meals / week`}
+              minLabel="0 meals (fully plant-based)"
+              maxLabel="21 meals (meat daily)"
+              onChange={handleDietChange}
+            />
 
-            {/* Transport Slider */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <label className="font-sans text-sm font-bold uppercase tracking-widest text-[#4A4A45]" htmlFor="transport-slider">Transportation</label>
-                <span className="font-serif text-lg text-brand-text font-semibold">
-                  {transportKm} km driven by car / week
-                </span>
-              </div>
-              <input 
-                id="transport-slider"
-                type="range" 
-                min="0" 
-                max="300" 
-                value={transportKm} 
-                onChange={(e) => setTransportKm(Number(e.target.value))}
-                className="minimal-slider"
-              />
-              <div className="flex justify-between text-xs text-[#575753] font-mono mt-1">
-                <span>0 km (no car travel)</span>
-                <span>300 km</span>
-              </div>
-            </div>
+            <SliderRow
+              id="transport-slider"
+              label="Transportation"
+              value={transportKm}
+              min={0}
+              max={300}
+              valueLabel={`${transportKm} km driven by car / week`}
+              minLabel="0 km (no car travel)"
+              maxLabel="300 km"
+              onChange={handleTransportChange}
+            />
 
-            {/* Energy Slider */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <label className="font-sans text-sm font-bold uppercase tracking-widest text-[#4A4A45]" htmlFor="energy-slider">Household Energy</label>
-                <span className="font-serif text-lg text-brand-text font-semibold">
-                  {energyTier === 0 ? 'Low Tier (~60 kg CO2e/mo)' : energyTier === 1 ? 'Medium Tier (~120 kg CO2e/mo)' : 'High Tier (~200 kg CO2e/mo)'}
-                </span>
-              </div>
-              <input 
-                id="energy-slider"
-                type="range" 
-                min="0" 
-                max="2" 
-                step="1"
-                value={energyTier} 
-                onChange={(e) => setEnergyTier(Number(e.target.value))}
-                className="minimal-slider"
-              />
-              <div className="flex justify-between text-xs text-[#575753] font-mono mt-1">
-                <span>Low</span>
-                <span>Medium</span>
-                <span>High</span>
-              </div>
-            </div>
+            <SliderRow
+              id="energy-slider"
+              label="Household Energy"
+              value={energyTier}
+              min={0}
+              max={2}
+              step={1}
+              valueLabel={energyTier === 0 ? 'Low Tier (~60 kg CO2e/mo)' : energyTier === 1 ? 'Medium Tier (~120 kg CO2e/mo)' : 'High Tier (~200 kg CO2e/mo)'}
+              minLabel="Low"
+              maxLabel="High"
+              onChange={handleEnergyChange}
+            />
 
-            {/* Shopping Slider */}
-            <div>
-              <div className="flex justify-between items-baseline mb-2">
-                <label className="font-sans text-sm font-bold uppercase tracking-widest text-[#4A4A45]" htmlFor="shopping-slider">Online Purchases</label>
-                <span className="font-serif text-lg text-brand-text font-semibold">
-                  {shoppingItems} new online purchases / month
-                </span>
-              </div>
-              <input 
-                id="shopping-slider"
-                type="range" 
-                min="0" 
-                max="20" 
-                value={shoppingItems} 
-                onChange={(e) => setShoppingItems(Number(e.target.value))}
-                className="minimal-slider"
-              />
-              <div className="flex justify-between text-xs text-[#575753] font-mono mt-1">
-                <span>0 purchases</span>
-                <span>20 purchases</span>
-              </div>
-            </div>
+            <SliderRow
+              id="shopping-slider"
+              label="Online Purchases"
+              value={shoppingItems}
+              min={0}
+              max={20}
+              valueLabel={`${shoppingItems} new online purchases / month`}
+              minLabel="0 purchases"
+              maxLabel="20 purchases"
+              onChange={handleShoppingChange}
+            />
           </div>
         </section>
 
@@ -301,24 +411,24 @@ export default function App() {
           
           {/* Stacked bar */}
           <div className="w-full h-3 flex overflow-hidden border border-[#E2E2DC] mb-4">
-            <div 
-              style={{ width: `${dietShare}%` }} 
-              className="h-full bg-[#1C1C1A] transition-all duration-300"
+            <BreakdownBarSegment
+              share={dietShare}
+              className="bg-[#1C1C1A]"
               title={`Diet: ${Math.round(dietFootprint)} kg (${Math.round(dietShare)}%)`}
             />
-            <div 
-              style={{ width: `${transportShare}%` }} 
-              className="h-full bg-[#575753] transition-all duration-300"
+            <BreakdownBarSegment
+              share={transportShare}
+              className="bg-[#575753]"
               title={`Transport: ${Math.round(transportFootprint)} kg (${Math.round(transportShare)}%)`}
             />
-            <div 
-              style={{ width: `${energyShare}%` }} 
-              className="h-full bg-[#9E9E96] transition-all duration-300"
+            <BreakdownBarSegment
+              share={energyShare}
+              className="bg-[#9E9E96]"
               title={`Energy: ${Math.round(energyFootprint)} kg (${Math.round(energyShare)}%)`}
             />
-            <div 
-              style={{ width: `${shoppingShare}%` }} 
-              className="h-full bg-[#D6D6CF] transition-all duration-300"
+            <BreakdownBarSegment
+              share={shoppingShare}
+              className="bg-[#D6D6CF]"
               title={`Shopping: ${Math.round(shoppingFootprint)} kg (${Math.round(shoppingShare)}%)`}
             />
           </div>
@@ -380,45 +490,18 @@ export default function App() {
 
           <div className="space-y-4 mb-8">
             {currentActions.map((action) => {
-              const savings = action.calculateSavings({
-                diet: dietMeals,
-                transport: transportKm,
-                energy: energyTier,
-                shopping: shoppingItems
-              });
+              const savings = action.calculateSavings(inputs);
               const isChecked = selectedActions.includes(action.id);
-              const isDisabled = savings <= 0;
 
               return (
-                <label 
+                <ActionPlanItem
                   key={action.id}
-                  htmlFor={action.id}
-                  className={`flex items-start gap-4 p-4 border transition-colors duration-150 cursor-pointer ${
-                    isChecked 
-                      ? 'border-brand-accent bg-[#5B7B5E]/5' 
-                      : 'border-[#E2E2DC] hover:border-[#4A4A45]'
-                  } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
-                >
-                  <input
-                    id={action.id}
-                    type="checkbox"
-                    checked={isChecked}
-                    disabled={isDisabled}
-                    onChange={() => handleToggleAction(action.id)}
-                    className="mt-1.5 h-4 w-4 accent-brand-accent rounded border-[#E2E2DC] focus-visible:ring-2 focus-visible:ring-brand-accent-dark focus-visible:ring-offset-2 focus-visible:outline-none"
-                  />
-                  <div className="flex-grow">
-                    <span className="font-serif text-[#1C1C1A] text-base block md:text-lg leading-snug font-medium">
-                      {action.label}
-                    </span>
-                    <span className="font-mono text-sm text-[#575753] mt-1 block">
-                      {isDisabled 
-                        ? 'Habit already at zero' 
-                        : `Saves ~${savings.toFixed(1)} kg CO2e / month`
-                      }
-                    </span>
-                  </div>
-                </label>
+                  id={action.id}
+                  label={action.label}
+                  savings={savings}
+                  isChecked={isChecked}
+                  onToggle={handleToggleAction}
+                />
               );
             })}
           </div>
@@ -489,12 +572,7 @@ export default function App() {
                     {currentActions
                       .filter(action => selectedActions.includes(action.id))
                       .map((action) => {
-                        const savings = action.calculateSavings({
-                          diet: dietMeals,
-                          transport: transportKm,
-                          energy: energyTier,
-                          shopping: shoppingItems
-                        });
+                        const savings = action.calculateSavings(inputs);
                         return (
                           <li key={action.id} className="flex justify-between items-start gap-4">
                             <span className="font-serif text-base leading-tight font-medium">— {action.label}</span>
